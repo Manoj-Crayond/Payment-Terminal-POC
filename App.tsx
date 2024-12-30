@@ -5,61 +5,71 @@
  * @format
  */
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
+  Alert,
+  Button,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   useColorScheme,
   View,
 } from 'react-native';
+import uuid from 'react-native-uuid';
+import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
+import {SanadPayEmitter, triggerSanadPay} from './sanadPay';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+type TTransactionData = {
+  RTransactionAmount: string;
+  RTransactionStatusCode: string;
+  RTransactionStatusDescription: string;
+  RAuthCode: string;
+  RDate: string;
+  RCardNo: string;
+  RTerminalID: string;
+};
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
 
+  const [transactionId, setTransactionId] = useState<string>('');
+  const [transactionData, setTransactionData] =
+    useState<TTransactionData | null>(null);
+  const [amount, setAmount] = useState<string>('');
+
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  };
+
+  useEffect(() => {
+    const listener = SanadPayEmitter.addListener(
+      'ReceivingData',
+      (data: TTransactionData | null) => {
+        console.log(data);
+        setTransactionData(data);
+      },
+    );
+
+    return () => {
+      listener.remove();
+    };
+  }, []);
+
+  const onPay = () => {
+    const id = uuid.v4();
+    setTransactionId(id);
+
+    triggerSanadPay(amount, id, ({success, message}) => {
+      if (success) {
+        Alert.alert('Transaction Successfull');
+      } else {
+        Alert.alert(message || 'Transaction Failed');
+      }
+    });
   };
 
   return (
@@ -75,21 +85,32 @@ function App(): React.JSX.Element {
         <View
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
+            ...styles.container,
           }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Enter your Amount:</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="10.00"
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="decimal-pad"
+            />
+            <Button title="Send" onPress={onPay} disabled={!amount}/>
+          </View>
+          <Text>Transaction Details:</Text>
+          <Text>Transaction Id: {transactionId || ''}</Text>
+          <Text>Amount: {transactionData?.RTransactionAmount || ''}</Text>
+          <Text>
+            Status Code: {transactionData?.RTransactionStatusCode || ''}
+          </Text>
+          <Text>
+            Description: {transactionData?.RTransactionStatusDescription || ''}
+          </Text>
+          <Text>Auth Code: {transactionData?.RAuthCode || ''}</Text>
+          <Text>Date: {transactionData?.RDate || ''}</Text>
+          <Text>Card No: {transactionData?.RCardNo || ''}</Text>
+          <Text>Terminal ID: {transactionData?.RTerminalID || ''}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -97,21 +118,23 @@ function App(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    padding: 24,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  inputContainer: {
+    paddingVertical: 20,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
   },
-  highlight: {
-    fontWeight: '700',
+  input: {
+    height: 64,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 12,
   },
 });
 
