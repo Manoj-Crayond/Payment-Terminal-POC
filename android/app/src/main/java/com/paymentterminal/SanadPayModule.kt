@@ -60,29 +60,61 @@ class SanadPayModule(reactContext: ReactApplicationContext) : ReactContextBaseJa
     }
 
     @SuppressLint("SetTextI18n")
-    @ReactMethod
-    fun receivingData() {
-        val intent = currentActivity?.intent;
+@ReactMethod
+fun receivingData() {
+    val currentActivity = currentActivity
+    if (currentActivity != null) {
+        val intent = currentActivity.intent
         if (intent != null) {
-            val params = Arguments.createMap()
+            val RTransactionAmount = intent.getStringExtra("RTransactionAmount") ?: ""
+            val RTransactionStatusCode = intent.getStringExtra("RTransactionStatusCode") ?: ""
+            val RTransactionStatusDescription = intent.getStringExtra("RTransactionStatusDescription") ?: "No description available"
+            val RAuthCode = intent.getStringExtra("RAuthCode") ?: ""
+            val RDate = intent.getStringExtra("RDate") ?: ""
+            val RCardNo = intent.getStringExtra("RCardNo") ?: ""
+            val RTerminalID = intent.getStringExtra("RTerminalID") ?: ""
+            val RCardScheme = intent.getStringExtra("RCardScheme") ?: ""
+            val R_RRN = intent.getStringExtra("R_RRN") ?: ""
 
-            params.putString("RTransactionAmount", intent.getStringExtra("RTransactionAmount") ?: "");
-            params.putString("RTransactionStatusCode", intent.getStringExtra("RTransactionStatusCode") ?: "");
-            params.putString("RTransactionStatusDescription", intent.getStringExtra("RTransactionStatusDescription") ?: "");
-            params.putString("RAuthCode", intent.getStringExtra("RAuthCode") ?: "");
-            params.putString("RDate", intent.getStringExtra("RDate") ?: "");
-            params.putString("RCardNo", intent.getStringExtra("RCardNo") ?: "");
-            params.putString("RTerminalID", intent.getStringExtra("RTerminalID") ?: "");
+            // Log all received values
+            Log.d("SanadPayModule", "RTransactionAmount=$RTransactionAmount")
+            Log.d("SanadPayModule", "RTransactionStatusCode=$RTransactionStatusCode")
+            Log.d("SanadPayModule", "RTransactionStatusDescription=$RTransactionStatusDescription")
+            Log.d("SanadPayModule", "RAuthCode=$RAuthCode")
+            Log.d("SanadPayModule", "RDate=$RDate")
+            Log.d("SanadPayModule", "RCardNo=$RCardNo")
+            Log.d("SanadPayModule", "RTerminalID=$RTerminalID")
+            Log.d("SanadPayModule", "RCardScheme=$RCardScheme")
+            Log.d("SanadPayModule", "R_RRN=$R_RRN")
 
-            val statusDescription = intent.getStringExtra("RTransactionStatusDescription") ?: "No description available"
-            Log.d("SanadPayModule", "RTransactionStatusDescription: $statusDescription")
-            Toast.makeText(reactApplicationContext, "Status: $statusDescription", Toast.LENGTH_LONG).show()
-            
+            // Show a Toast with the status description
+            Toast.makeText(reactApplicationContext, "Status: $RTransactionStatusDescription", Toast.LENGTH_LONG).show()
+
+            // Create a map of parameters to send to React Native
+            val params = Arguments.createMap().apply {
+                putString("RTransactionAmount", RTransactionAmount)
+                putString("RTransactionStatusCode", RTransactionStatusCode)
+                putString("RTransactionStatusDescription", RTransactionStatusDescription)
+                putString("RAuthCode", RAuthCode)
+                putString("RDate", RDate)
+                putString("RCardNo", RCardNo)
+                putString("RTerminalID", RTerminalID)
+                putString("RCardScheme", RCardScheme)
+                putString("R_RRN", R_RRN)
+            }
+
+            // Send the event to JavaScript
             sendEvent("ReceivingData", params)
         } else {
+            // Log and notify when the intent is null
             Log.d("SanadPayModule", "Intent is null")
             Toast.makeText(reactApplicationContext, "No data received from intent", Toast.LENGTH_SHORT).show()
             sendEvent("ReceivingData", null)
         }
+    } else {
+        // Handle the case where the current activity is null
+        Log.d("SanadPayModule", "Current activity is null")
+        Toast.makeText(reactApplicationContext, "No activity context available", Toast.LENGTH_SHORT).show()
     }
+}
 }

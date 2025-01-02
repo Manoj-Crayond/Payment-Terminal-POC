@@ -15,13 +15,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   useColorScheme,
   View,
 } from 'react-native';
 import uuid from 'react-native-uuid';
 import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
-import {SanadPayEmitter, triggerSanadPay} from './sanadPay';
+import {SanadPayEmitter, triggerSanadPay, receivingData} from './sanadPay';
 
 type TTransactionData = {
   RTransactionAmount: string;
@@ -97,6 +96,7 @@ function App(): React.JSX.Element {
               keyboardType="decimal-pad"
             />
             <Button title="Send" onPress={onPay} disabled={!amount}/>
+            <Button title="Receive" onPress={()=>receivingData()}/>
           </View>
           <Text>Transaction Details:</Text>
           <Text>Transaction Id: {transactionId || ''}</Text>

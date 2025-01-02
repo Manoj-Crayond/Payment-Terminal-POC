@@ -26,4 +26,6 @@ const triggerSanadPay = (amount: string, transactionId: string, callback: (param
     }
 };
 
-export { SanadPayEmitter, type TTransactionData, type TBroadcastResponse, triggerSanadPay };
+const receivingData = SanadPay.receivingData;
+
+export { SanadPayEmitter, type TTransactionData, type TBroadcastResponse, triggerSanadPay, receivingData };
