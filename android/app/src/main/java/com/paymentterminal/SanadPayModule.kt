@@ -36,7 +36,7 @@ class SanadPayModule(reactContext: ReactApplicationContext) :
                 action = Intent.ACTION_SEND
                 component = ComponentName(
                     sanadPayPackageName,
-                    "${sanadPayPackageName}.MainActivity"
+                    "${sanadPayPackageName}.ui.idle.IdleActivity"
                 )
                 `package` = sanadPayPackageName
 
