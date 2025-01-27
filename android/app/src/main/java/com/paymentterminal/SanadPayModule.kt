@@ -9,15 +9,14 @@ import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
 
 class SanadPayModule(reactContext: ReactApplicationContext) :
-    ReactContextBaseJavaModule(reactContext),
-    LifecycleEventListener {
+    ReactContextBaseJavaModule(reactContext), LifecycleEventListener {
 
     override fun getName(): String {
         return "SanadPay"
     }
 
     private val packageName: String = reactApplicationContext.packageName
-    private val packageNameClass: String = "com.paymentterminal.MainActivity"
+    private val sanadPayPackageName: String = "global.citytech.pos"
 
     init {
         reactContext.addLifecycleEventListener(this)
@@ -31,30 +30,45 @@ class SanadPayModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun sendBroadcastMessage(amount: String, transactionId: String, callback: Callback) {
-        val context = reactApplicationContext
-        val sendIntent = Intent("global.citytech.pos").apply {
-            action = Intent.ACTION_SEND
-            component = ComponentName("global.citytech.pos", "global.citytech.pos.ui.idle.IdleActivity")
-            `package` = "global.citytech.pos"
-            putExtra("QTransactionAmount", amount)
-            putExtra("QTranID", transactionId)
-            putExtra("QPackageName", packageName)
-            putExtra("QPackageClass", packageNameClass)
-            type = "text/plain"
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        try {
+            val context = reactApplicationContext
+            val sendIntent = Intent(sanadPayPackageName).apply {
+                action = Intent.ACTION_SEND
+                component = ComponentName(
+                    sanadPayPackageName,
+                    "${sanadPayPackageName}.MainActivity"
+                )
+                `package` = sanadPayPackageName
 
-        val params = Arguments.createMap()
-        if (context.packageManager.resolveActivity(sendIntent, 0) != null) {
-            context.startActivity(sendIntent)
+                putExtra("QTransactionAmount", amount)
+                putExtra("QTranID", transactionId)
+                putExtra("QPackageName", packageName)
+                putExtra("QPackageClass", "${packageName}.MainActivity")
+                type = "text/plain"
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
 
-            params.putString("message", "Broadcast Sent!")
-            params.putBoolean("success", true)
+            val params = Arguments.createMap()
+            if (context.packageManager.resolveActivity(sendIntent, 0) != null) {
+                context.startActivity(sendIntent)
 
-            callback.invoke(params)
-        } else {
-            params.putString("message", "Failed to send broadcast, no package found.")
+                params.putString("message", "Payment processed successfully")
+                params.putBoolean("success", true)
+
+                callback.invoke(params)
+            } else {
+                params.putString("message", "Failed to send broadcast, no package found.")
+                params.putBoolean("success", false)
+
+                Toast.makeText(reactApplicationContext, "Failed to send broadcast, no package found.", Toast.LENGTH_SHORT).show()
+
+                callback.invoke(params)
+            }
+
+        } catch (e: Exception) {
+            val params = Arguments.createMap()
             params.putBoolean("success", false)
+            params.putString("message", e.message);
 
             callback.invoke(params)
         }
@@ -63,72 +77,46 @@ class SanadPayModule(reactContext: ReactApplicationContext) :
     @SuppressLint("SetTextI18n")
     @ReactMethod
     fun receivingData() {
-        val currentActivity = currentActivity
-        if (currentActivity != null) {
-            val intent = currentActivity.intent
-            if (intent != null) {
-                val RTransactionAmount = intent.getStringExtra("RTransactionAmount") ?: ""
-                val RTransactionStatusCode = intent.getStringExtra("RTransactionStatusCode") ?: ""
-                val RTransactionStatusDescription = intent.getStringExtra("RTransactionStatusDescription") ?: "No description available"
-                val RAuthCode = intent.getStringExtra("RAuthCode") ?: ""
-                val RDate = intent.getStringExtra("RDate") ?: ""
-                val RCardNo = intent.getStringExtra("RCardNo") ?: ""
-                val RTerminalID = intent.getStringExtra("RTerminalID") ?: ""
-                val RCardScheme = intent.getStringExtra("RCardScheme") ?: ""
-                val R_RRN = intent.getStringExtra("R_RRN") ?: ""
+        val activity = currentActivity
+        if (activity == null) {
+            Log.d("SanadPayModule", "receivingData: getCurrentActivity() returned null")
+            return
+        }
 
-                // Log all received values
-                Log.d("SanadPayModule", "RTransactionAmount=$RTransactionAmount")
-                Log.d("SanadPayModule", "RTransactionStatusCode=$RTransactionStatusCode")
-                Log.d("SanadPayModule", "RTransactionStatusDescription=$RTransactionStatusDescription")
-                Log.d("SanadPayModule", "RAuthCode=$RAuthCode")
-                Log.d("SanadPayModule", "RDate=$RDate")
-                Log.d("SanadPayModule", "RCardNo=$RCardNo")
-                Log.d("SanadPayModule", "RTerminalID=$RTerminalID")
-                Log.d("SanadPayModule", "RCardScheme=$RCardScheme")
-                Log.d("SanadPayModule", "R_RRN=$R_RRN")
+        val intent = activity.intent
 
-                // Show a Toast with the status description
-                Toast.makeText(reactApplicationContext, "Status: $RTransactionStatusDescription", Toast.LENGTH_LONG).show()
+        if (intent.action == Intent.ACTION_SEND) {
 
-                // Create a map of parameters to send to React Native
-                val params = Arguments.createMap().apply {
-                    putString("RTransactionAmount", RTransactionAmount)
-                    putString("RTransactionStatusCode", RTransactionStatusCode)
-                    putString("RTransactionStatusDescription", RTransactionStatusDescription)
-                    putString("RAuthCode", RAuthCode)
-                    putString("RDate", RDate)
-                    putString("RCardNo", RCardNo)
-                    putString("RTerminalID", RTerminalID)
-                    putString("RCardScheme", RCardScheme)
-                    putString("R_RRN", R_RRN)
-                }
+            val jsIntent = Arguments.createMap()
+            jsIntent.putString("action", intent.action)
+            jsIntent.putString("RTransactionAmount", intent.getStringExtra("RTransactionAmount"))
+            jsIntent.putString("RTransactionStatusCode", intent.getStringExtra("RTransactionStatusCode"))
+            jsIntent.putString("RTransactionStatusDescription", intent.getStringExtra("RTransactionStatusDescription"))
+            jsIntent.putString("RAuthCode", intent.getStringExtra("RAuthCode"))
+            jsIntent.putString("RDate", intent.getStringExtra("RDate"))
+            jsIntent.putString("RCardNo", intent.getStringExtra("RCardNo"))
+            jsIntent.putString("RTerminalID", intent.getStringExtra("RTerminalID"))
+            jsIntent.putString("RCardScheme", intent.getStringExtra("RCardScheme"))
+            jsIntent.putString("R_RRN", intent.getStringExtra("R_RRN"))
 
-                // Send the event to JavaScript
-                sendEvent("ReceivingData", params)
-            } else {
-                // Log and notify when the intent is null
-                Log.d("SanadPayModule", "Intent is null")
-                Toast.makeText(reactApplicationContext, "No data received from intent", Toast.LENGTH_SHORT).show()
-                sendEvent("ReceivingData", null)
-            }
+            sendEvent("sanadpay-receive", jsIntent)
+
+            Toast.makeText(reactApplicationContext, "${intent.getStringExtra("RTransactionStatusDescription")}", Toast.LENGTH_SHORT).show()
         } else {
-            // Handle the case where the current activity is null
-            Log.d("SanadPayModule", "Current activity is null")
-            Toast.makeText(reactApplicationContext, "No activity context available", Toast.LENGTH_SHORT).show()
+            Log.d("SanadPayModule", "Received Intent is not ACTION_SEND, action=${intent.action}")
         }
     }
 
     override fun onHostResume() {
-        Log.d("SanadPayModule", "onHostResume called")
         receivingData()
-    }
-
-    override fun onHostPause() {
-        Log.d("SanadPayModule", "onHostPause called")
+        Log.d("SanadPayModule", "onHostResume called")
     }
 
     override fun onHostDestroy() {
         Log.d("SanadPayModule", "onHostDestroy called")
+    }
+
+    override fun onHostPause() {
+        Log.d("SanadPayModule", "onHostPause called")
     }
 }

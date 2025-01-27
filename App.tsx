@@ -7,7 +7,6 @@
 
 import React, {useEffect, useState} from 'react';
 import {
-  Alert,
   Button,
   SafeAreaView,
   ScrollView,
@@ -20,17 +19,7 @@ import {
 } from 'react-native';
 import uuid from 'react-native-uuid';
 import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
-import {SanadPayEmitter, triggerSanadPay, receivingData} from './sanadPay';
-
-type TTransactionData = {
-  RTransactionAmount: string;
-  RTransactionStatusCode: string;
-  RTransactionStatusDescription: string;
-  RAuthCode: string;
-  RDate: string;
-  RCardNo: string;
-  RTerminalID: string;
-};
+import {SanadPayEmitter, triggerSanadPay, TTransactionData} from './sanadPay';
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -46,7 +35,7 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     const listener = SanadPayEmitter.addListener(
-      'ReceivingData',
+      'sanadpay-receive',
       (data: TTransactionData | null) => {
         console.log(data);
         setTransactionData(data);
@@ -62,13 +51,7 @@ function App(): React.JSX.Element {
     const id = uuid.v4();
     setTransactionId(id);
 
-    triggerSanadPay(amount, id, ({success, message}) => {
-      if (success) {
-        Alert.alert('Transaction Successfull');
-      } else {
-        Alert.alert(message || 'Transaction Failed');
-      }
-    });
+    triggerSanadPay(amount, id, () => null);
   };
 
   return (
@@ -95,8 +78,7 @@ function App(): React.JSX.Element {
               onChangeText={setAmount}
               keyboardType="decimal-pad"
             />
-            <Button title="Send" onPress={onPay} disabled={!amount}/>
-            <Button title="Receive" onPress={()=>receivingData()}/>
+            <Button title="Send" onPress={onPay} disabled={!amount} />
           </View>
           <Text>Transaction Details:</Text>
           <Text>Transaction Id: {transactionId || ''}</Text>
@@ -110,7 +92,9 @@ function App(): React.JSX.Element {
           <Text>Auth Code: {transactionData?.RAuthCode || ''}</Text>
           <Text>Date: {transactionData?.RDate || ''}</Text>
           <Text>Card No: {transactionData?.RCardNo || ''}</Text>
+          <Text>Card Scheme: {transactionData?.RCardScheme || ''}</Text>
           <Text>Terminal ID: {transactionData?.RTerminalID || ''}</Text>
+          <Text>R_RRN: {transactionData?.R_RRN || ''}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
